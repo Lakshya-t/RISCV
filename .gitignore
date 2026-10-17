@@ -1,7 +1,10 @@
 # Simulation artifacts
 riscv_sim
+single_sim
+pipe_sim
 *.vcd
 waveform.vcd
+*.out
 
 # OS generated files
 .DS_Store
