@@ -79,13 +79,13 @@ A 32-bit 5-stage pipelined processor implementing the base integer subset (**RV3
 | [`src/ALU.v`](src/ALU.v) | `ALU` | EX | 32-bit ALU supporting 10 arithmetic/logic operations and branch comparison flags. |
 | [`src/Control_Unit_Top.v`](src/Control_Unit_Top.v) | `Control_Unit_Top` | ID | Main instruction decoder generating all pipeline control signals across opcodes. |
 | [`src/Register_File.v`](src/Register_File.v) | `Register_File` | ID/WB | 32 × 32-bit register file with asynchronous dual reads, sync write, and `x0` protection. |
-| [`src/Instruction_Memory.v`](src/Instruction_Memory.v) | `Instruction_Memory` | IF | 1024-word ROM pre-loaded with the 19-instruction self-checking test suite. |
+| [`src/Instruction_Memory.v`](src/Instruction_Memory.v) | `Instruction_Memory` | IF | 1024-word ROM pre-loaded with the self-checking benchmark test suite. |
 | [`src/Data_Memory.v`](src/Data_Memory.v) | `Data_Memory` | MEM | 1024-word RAM for synchronous store (`SW`) and asynchronous load (`LW`) operations. |
 | [`src/Sign_Extend.v`](src/Sign_Extend.v) | `Sign_Extend` | ID | Immediate generation unit supporting I, S, B, J, and U (`LUI`, `AUIPC`) formats. |
 | [`src/PC.v`](src/PC.v) | `PC_Module` | IF | Synchronous program counter register with stall-enable input. |
 | [`src/PC_Adder.v`](src/PC_Adder.v) | `PC_Adder` | IF/EX | 32-bit adder for PC increments and branch target calculation. |
 | [`src/Mux.v`](src/Mux.v) | `Mux`, `Mux_3_by_1` | - | 2-to-1 and 3-to-1 parameterized multiplexers. |
-| [`testbench/pipeline_tb.v`](testbench/pipeline_tb.v) | `pipeline_tb` | TB | Self-checking testbench generating 50 MHz clock, reset, and automated assertion report. |
+| [`testbench/pipeline_tb.v`](testbench/pipeline_tb.v) | `pipeline_tb` | TB | Self-checking testbench validating all 32 execution assertions with automated pass/fail report. |
 
 ---
 
@@ -121,6 +121,7 @@ A 32-bit 5-stage pipelined processor implementing the base integer subset (**RV3
 - **`LUI` (`opcode: 0110111`):** Load Upper Immediate (`rd <= imm[31:12] << 12`).
 - **`AUIPC` (`opcode: 0010111`):** Add Upper Immediate to PC (`rd <= PC + (imm[31:12] << 12)`).
 - **`JAL` (`opcode: 1101111`):** Jump and Link (`PC <= PC + offset`, `rd <= PC + 4`).
+- **`JALR` (`opcode: 1100111`):** Jump and Link Register (`PC <= (rs1 + offset) & ~1`, `rd <= PC + 4`).
 
 ---
 
@@ -128,5 +129,5 @@ A 32-bit 5-stage pipelined processor implementing the base integer subset (**RV3
 
 The pipelined processor was tested and validated through behavioural simulation:
 - **Zero Warnings / Zero Errors:** Clean elaboration and zero warnings under RTL behavioral simulation.
-- **Hazard Suite Validation:** The test sequence in [`src/Instruction_Memory.v`](src/Instruction_Memory.v) exercises back-to-back RAW dependencies (verifying EX-to-EX forwarding), load-use dependencies (verifying 1-cycle pipeline bubble insertion), and conditional branch flushes.
+- **Hazard Suite Validation:** The test sequence in [`src/Instruction_Memory.v`](src/Instruction_Memory.v) exercises back-to-back RAW dependencies (verifying EX-to-EX and MEM-to-EX forwarding), store-data forwarding, load-use dependencies into arithmetic and branch instructions, conditional branch flushes, and loop branch redirection, validating all 32 self-checking assertions and exiting non-zero on failure.
 - **Waveform Inspection:** Complete signal transitions, pipeline registers, and forwarding multiplexers can be viewed via GTKWave (`pipeline_waveform.vcd`).

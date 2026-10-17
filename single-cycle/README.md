@@ -86,7 +86,7 @@ A 32-bit single-cycle processor implementing the base integer subset (**RV32I**)
 | [`src/instruction_memory.v`](src/instruction_memory.v) | `instruction_memory` | 1024-word ROM pre-loaded with the self-checking test suite. |
 | [`src/data_memory.v`](src/data_memory.v) | `data_memory` | 1024-word (4 KB) RAM for synchronous store (`SW`) and asynchronous load (`LW`) operations. |
 | [`src/imm_gen.v`](src/imm_gen.v) | `imm_gen` | Immediate generation module supporting I, S, B, U, and J formats. |
-| [`testbench/top_tb.v`](testbench/top_tb.v) | `top_tb` | Self-checking simulation testbench validating all 19 execution assertions. |
+| [`testbench/top_tb.v`](testbench/top_tb.v) | `top_tb` | Self-checking simulation testbench validating all 32 execution assertions. |
 
 ---
 
@@ -122,6 +122,7 @@ A 32-bit single-cycle processor implementing the base integer subset (**RV32I**)
 - **`LUI` (`opcode: 0110111`):** Load Upper Immediate (`rd <= imm[31:12] << 12`).
 - **`AUIPC` (`opcode: 0010111`):** Add Upper Immediate to PC (`rd <= PC + (imm[31:12] << 12)`).
 - **`JAL` (`opcode: 1101111`):** Jump and Link (`PC <= PC + offset`, `rd <= PC + 4`).
+- **`JALR` (`opcode: 1100111`):** Jump and Link Register (`PC <= (rs1 + offset) & ~1`, `rd <= PC + 4`).
 
 ---
 
@@ -129,7 +130,7 @@ A 32-bit single-cycle processor implementing the base integer subset (**RV32I**)
 
 The processor was verified through behavioral simulation:
 - **Zero Warnings / Zero Errors:** Clean compilation and elaboration under standard Verilog simulation environments.
-- **Self-Checking Testbench:** [`testbench/top_tb.v`](testbench/top_tb.v) applies a 50 MHz clock signal, asserts a 100 ns reset sequence, and automatically asserts that all 19 benchmark test cases execute with mathematically exact results.
+- **Self-Checking Testbench:** [`testbench/top_tb.v`](testbench/top_tb.v) applies a 50 MHz clock signal, asserts a 100 ns reset sequence, and automatically asserts that all 32 benchmark test cases execute with mathematically exact results, terminating with a non-zero exit code on any failure.
 - **Waveform Inspection:** Signal traces (`waveform.vcd`) confirm ALU calculations, branch redirection, jump links, and register writeback cycles.
 
 ---

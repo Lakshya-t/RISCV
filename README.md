@@ -1,9 +1,9 @@
 # RISC-V (RV32I) Processor Cores in Verilog
 
-This repository contains two complete hardware implementations of the 32-bit RISC-V Instruction Set Architecture (**RV32I** Base Integer Subset) designed in synthesizable Verilog HDL:
+This repository contains two hardware implementations of the 32-bit RISC-V Instruction Set Architecture (**RV32I** Base Integer Subset, word-oriented memory model) designed in synthesizable Verilog HDL:
 
-1. **[`single-cycle/`](single-cycle/):** A non-pipelined, single-cycle baseline processor serving as the functional golden verification model.
-2. **[`pipelined/`](pipelined/):** A high-throughput 5-stage classic RISC pipelined processor with dynamic data forwarding, load-use hazard stalling, and branch flushing.
+1. **[`single-cycle/`](single-cycle/):** A non-pipelined, single-cycle processor serving as the functional baseline model.
+2. **[`pipelined/`](pipelined/):** A 5-stage classic RISC pipelined processor featuring hardware data forwarding, load-use hazard stalling, and branch flushing.
 
 ---
 
@@ -12,21 +12,21 @@ This repository contains two complete hardware implementations of the 32-bit RIS
 | Feature | Single-Cycle Core (`single-cycle/`) | 5-Stage Pipelined Core (`pipelined/`) |
 | :--- | :--- | :--- |
 | **Pipeline Stages** | 1 (Non-pipelined) | 5 (IF, ID, EX, MEM, WB) |
-| **Clock Frequency** | 50 MHz (20 ns cycle period) | 50 MHz+ (decomposed critical path) |
+| **Simulation Clock** | 50 MHz (20 ns cycle period) | 50 MHz (20 ns cycle period) |
 | **Ideal CPI** | 1.0 | 1.0 (approaching) |
 | **Data Hazards** | N/A (completed in one cycle) | Resolved via EX-to-EX & MEM-to-EX Forwarding |
 | **Load-Use Hazards** | N/A | Hardware detection with 1-cycle stall bubble |
 | **Control Hazards** | Single-cycle branch resolution | Evaluated in EX; 2-cycle flush penalty on branch taken |
-| **Memory Model** | Harvard (Separate byte ROM & RAM) | Harvard (Word-aligned 4 KB ROM & RAM) |
+| **Memory Model** | Harvard (Word-aligned 4 KB ROM & RAM) | Harvard (Word-aligned 4 KB ROM & RAM) |
 | **Register File** | 32 × 32-bit, `x0` hardwired to 0 | 32 × 32-bit, `x0` hardwired to 0 + internal write bypass |
-| **Supported ISA** | RV32I (R, I, S, B, U, J) | RV32I (R, I, S, B, U, J) |
+| **Supported ISA** | RV32I Base Subset (R, I, S, B, U, J) | RV32I Base Subset (R, I, S, B, U, J) |
 
 ---
 
 ## 📁 Repository Organization
 
 ```text
-RISC-V/
+RISCV/
 ├── README.md                      # Root repository overview and architectural comparison
 ├── single-cycle/                  # Single-Cycle RV32I Processor Core
 │   ├── src/                       # Design source files
@@ -36,11 +36,11 @@ RISC-V/
 │   │   ├── register_file.v        # 32 x 32-bit register file (x0 write protected)
 │   │   ├── alu.v                  # Arithmetic Logic Unit (10 operations + branch comp)
 │   │   ├── instruction_fetch_unit.v # Program Counter and sequential step logic
-│   │   ├── instruction_memory.v   # 24-instruction preloaded ROM
-│   │   ├── data_memory.v          # 32-byte synchronous RAM
+│   │   ├── instruction_memory.v   # 1024-word preloaded ROM (benchmark suite)
+│   │   ├── data_memory.v          # 1024-word RAM (4 KB)
 │   │   └── imm_gen.v              # Immediate generation module
 │   ├── testbench/                 # Testbench files
-│   │   └── top_tb.v               # Single-cycle testbench
+│   │   └── top_tb.v               # Single-cycle self-checking testbench
 │   ├── run_sim.sh                 # One-click simulation script
 │   └── README.md                  # Detailed single-cycle architecture documentation
 │
@@ -56,9 +56,9 @@ RISC-V/
     │   ├── ALU.v                  # 32-bit ALU with signed/unsigned comparison flags
     │   ├── Control_Unit_Top.v     # Pipelined instruction decoder
     │   ├── Register_File.v        # Register bank with x0 protection & internal bypass
-    │   ├── Instruction_Memory.v   # 1024-word preloaded ROM (24-instruction suite)
+    │   ├── Instruction_Memory.v   # 1024-word preloaded ROM (benchmark suite)
     │   ├── Data_Memory.v          # 1024-word RAM (4 KB)
-    │   ├── Sign_Extend.v          # Immediate generator for I, S, B, J, and U (LUI)
+    │   ├── Sign_Extend.v          # Immediate generator for I, S, B, J, and U formats
     │   ├── PC.v                   # Program Counter register with stall-enable
     │   ├── PC_Adder.v             # 32-bit adder for PC increments and targets
     │   └── Mux.v                  # Parameterized 2:1 and 3:1 multiplexers
@@ -70,22 +70,23 @@ RISC-V/
 
 ---
 
-## ⚙️ Supported Instruction Set (RV32I)
+## ⚙️ Supported Instruction Set (RV32I Base Integer Subset)
 
-Both processors provide complete hardware decode and execution for the base integer subset:
+Both processors provide hardware decode and execution for the base integer subset:
 
 - **R-Type:** `ADD`, `SUB`, `SLL`, `SLT`, `SLTU`, `XOR`, `SRL`, `SRA`, `OR`, `AND`
 - **I-Type Arithmetic & Shifts:** `ADDI`, `SLLI`, `SLTI`, `SLTIU`, `XORI`, `SRLI`, `SRAI`, `ORI`, `ANDI`
-- **Loads:** `LW`
-- **Stores:** `SW`
+- **Loads & Stores (Word-Aligned):** `LW`, `SW` (decodes `funct3 = 010`; other sub-word variants act as safe NOPs)
 - **Conditional Branches:** `BEQ`, `BNE`, `BLT`, `BGE`, `BLTU`, `BGEU`
 - **Upper Immediate & Jumps:** `LUI`, `AUIPC`, `JAL`, `JALR`
+
+*Note: Environment call/break (`ECALL`, `EBREAK`), memory barrier (`FENCE`), and sub-word accesses (`LB`, `LH`, `SB`, `SH`) default to safe NOP operations without state modification.*
 
 ---
 
 ## 🔬 Simulation & Verification
 
-Both cores are verified through comprehensive RTL behavioral simulation with zero compilation errors and zero warnings.
+Both cores are verified through comprehensive behavioral simulation with 0 compilation errors and 0 warnings under standard tool flags. Each testbench performs 32 automated self-checking assertions and terminates with a non-zero exit code on failure.
 
 ### Running the Single-Cycle Core
 ```bash
