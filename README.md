@@ -81,7 +81,7 @@ A 32-bit single-cycle processor implementing the base integer subset (**RV32I**)
 | [`control_unit.v`](control_unit.v) | `control_unit` | Main decoder decoding `opcode`, `funct3`, and `funct7` into operational control signals. |
 | [`alu.v`](alu.v) | `alu` | Arithmetic Logic Unit executing arithmetic, logical shifts, and branch condition comparisons. |
 | [`register_file.v`](register_file.v) | `register_file` | 32 × 32-bit general-purpose register bank with asynchronous dual reads and synchronous writes. |
-| [`instruction_fetch_unit.v`](instruction_fetch_unit.v) | `instruction_fetch_unit` | Program Counter (PC) logic managing sequential steps ($PC+4$), branch targets, and jump links. |
+| [`instruction_fetch_unit.v`](instruction_fetch_unit.v) | `instruction_fetch_unit` | Program Counter (PC) logic managing sequential steps (`PC + 4`), branch targets, and jump links. |
 | [`instruction_memory.v`](instruction_memory.v) | `instruction_memory` | Byte-addressable ROM pre-loaded with 24 test instructions using little-endian byte ordering. |
 | [`data_memory.v`](data_memory.v) | `data_memory` | 32-byte RAM for data storage supporting Load (`LW`/`LB`) and Store (`SW`) instructions. |
 | [`imm_gen.v`](imm_gen.v) | `imm_gen` | Standalone immediate generation module. *(Immediate slicing is handled inline in `top_riscv.v`)*. |
@@ -94,16 +94,16 @@ A 32-bit single-cycle processor implementing the base integer subset (**RV32I**)
 ### 1. R-Type (Register to Register) — `opcode: 0110011`
 | Instruction | funct3 | funct7 | Operation | Description |
 | :--- | :---: | :---: | :--- | :--- |
-| **ADD** | `000` | `0000000` | $rd = rs1 + rs2$ | Addition |
-| **SUB** | `000` | `0100000` | $rd = rs1 - rs2$ | Subtraction |
-| **SLL** | `001` | `0000000` | $rd = rs1 \ll rs2[4:0]$ | Shift Left Logical |
-| **SLT** | `010` | `0000000` | $rd = (rs1 < rs2) \text{ ? } 1 : 0$ | Set Less Than (signed) |
-| **SLTU** | `011` | `0000000` | $rd = (rs1 < rs2) \text{ ? } 1 : 0$ | Set Less Than Unsigned |
-| **XOR** | `100` | `0000000` | $rd = rs1 \oplus rs2$ | Bitwise XOR |
-| **SRL** | `101` | `0000000` | $rd = rs1 \gg rs2[4:0]$ | Shift Right Logical |
-| **SRA** | `101` | `0100000` | $rd = rs1 \ggg rs2[4:0]$ | Shift Right Arithmetic |
-| **OR** | `110` | `0000000` | $rd = rs1 \mid rs2$ | Bitwise OR |
-| **AND** | `111` | `0000000` | $rd = rs1 \ \& \ rs2$ | Bitwise AND |
+| **ADD** | `000` | `0000000` | `rd = rs1 + rs2` | Addition |
+| **SUB** | `000` | `0100000` | `rd = rs1 - rs2` | Subtraction |
+| **SLL** | `001` | `0000000` | `rd = rs1 << rs2[4:0]` | Shift Left Logical |
+| **SLT** | `010` | `0000000` | `rd = (rs1 < rs2) ? 1 : 0` | Set Less Than (signed) |
+| **SLTU** | `011` | `0000000` | `rd = (rs1 < rs2) ? 1 : 0` | Set Less Than Unsigned |
+| **XOR** | `100` | `0000000` | `rd = rs1 ^ rs2` | Bitwise XOR |
+| **SRL** | `101` | `0000000` | `rd = rs1 >> rs2[4:0]` | Shift Right Logical |
+| **SRA** | `101` | `0100000` | `rd = rs1 >>> rs2[4:0]` | Shift Right Arithmetic |
+| **OR** | `110` | `0000000` | `rd = rs1 \| rs2` | Bitwise OR |
+| **AND** | `111` | `0000000` | `rd = rs1 & rs2` | Bitwise AND |
 
 ### 2. I-Type (Immediate Arithmetic & Loads)
 - **Arithmetic (`opcode: 0010011`):** `ADDI`, `SLLI`, `SLTI`, `SLTIU`, `XORI`, `SRLI`, `ORI`, `ANDI`
@@ -114,11 +114,11 @@ A 32-bit single-cycle processor implementing the base integer subset (**RV32I**)
 
 ### 4. B-Type (Conditional Branches) — `opcode: 1100011`
 - `BEQ` (Branch if Equal), `BNE` (Branch if Not Equal), `BLT` (Branch if Less Than), `BGE` (Branch if Greater or Equal)
-- Computes target address: $PC \leftarrow PC + \text{sign\_extended(offset)}$.
+- Computes target address: `PC <= PC + sign_extended(offset)`.
 
 ### 5. U-Type & J-Type (Upper Immediate & Jump)
-- **`LUI` (`opcode: 0110111`):** Load Upper Immediate ($rd \leftarrow \text{imm}[31:12] \ll 12$).
-- **`JAL` (`opcode: 1101111`):** Jump and Link ($PC \leftarrow PC + \text{offset}$, $rd \leftarrow PC + 4$).
+- **`LUI` (`opcode: 0110111`):** Load Upper Immediate (`rd <= imm[31:12] << 12`).
+- **`JAL` (`opcode: 1101111`):** Jump and Link (`PC <= PC + offset`, `rd <= PC + 4`).
 
 ---
 
