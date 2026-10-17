@@ -76,10 +76,10 @@ Both processors provide complete hardware decode and execution for the base inte
 
 - **R-Type:** `ADD`, `SUB`, `SLL`, `SLT`, `SLTU`, `XOR`, `SRL`, `SRA`, `OR`, `AND`
 - **I-Type Arithmetic & Shifts:** `ADDI`, `SLLI`, `SLTI`, `SLTIU`, `XORI`, `SRLI`, `SRAI`, `ORI`, `ANDI`
-- **Loads:** `LW`, `LB`
-- **Stores:** `SW`, `SB`
+- **Loads:** `LW`
+- **Stores:** `SW`
 - **Conditional Branches:** `BEQ`, `BNE`, `BLT`, `BGE`, `BLTU`, `BGEU`
-- **Upper Immediate & Jumps:** `LUI`, `JAL`
+- **Upper Immediate & Jumps:** `LUI`, `AUIPC`, `JAL`, `JALR`
 
 ---
 
@@ -92,11 +92,11 @@ Both cores are verified through comprehensive RTL behavioral simulation with zer
 cd single-cycle
 ./run_sim.sh
 ```
-*Generates `waveform.vcd` tracing all 24 instructions.*
+*Executes the benchmark program and outputs automated self-checking assertion results.*
 
 ### Running the 5-Stage Pipelined Core
 ```bash
 cd pipelined
 ./run_sim.sh
 ```
-*Generates `pipeline_waveform.vcd` verifying forwarding, load-use stalls, and branch flushes.*
+*Executes the benchmark program and outputs real-time forwarding, stall, and flush events.*

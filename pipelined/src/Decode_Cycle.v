@@ -19,6 +19,7 @@ module Decode_Cycle (
     output reg    branch_e,
     output reg [2:0] branch_op_e,
     output reg    jump_e,
+    output reg    jalr_e,
     output reg [3:0] alu_control_e,
     output reg [31:0] rd1_e,
     output reg [31:0] rd2_e,
@@ -31,7 +32,7 @@ module Decode_Cycle (
 );
 
     // Combinational signals in Decode stage
-    wire reg_write_d, alu_src_d, mem_write_d, branch_d, jump_d;
+    wire reg_write_d, alu_src_d, mem_write_d, branch_d, jump_d, jalr_d;
     wire [1:0] result_src_d;
     wire [2:0] imm_src_d;
     wire [2:0] branch_op_d;
@@ -54,7 +55,8 @@ module Decode_Cycle (
         .branch(branch_d),
         .branch_op(branch_op_d),
         .alu_control(alu_control_d),
-        .jump(jump_d)
+        .jump(jump_d),
+        .jalr(jalr_d)
     );
 
     // Register File (32 x 32-bit registers)
@@ -77,9 +79,9 @@ module Decode_Cycle (
         .imm_ext(imm_ext_d)
     );
 
-    // ID/EX Pipeline Register
+    // ID/EX Pipeline Register: Synthesizable priority (async reset > sync flush > register)
     always @(posedge clk or negedge rst) begin
-        if (rst == 1'b0 || flush_e) begin
+        if (rst == 1'b0) begin
             reg_write_e   <= 1'b0;
             alu_src_e     <= 1'b0;
             mem_write_e   <= 1'b0;
@@ -87,6 +89,25 @@ module Decode_Cycle (
             branch_e      <= 1'b0;
             branch_op_e   <= 3'b000;
             jump_e        <= 1'b0;
+            jalr_e        <= 1'b0;
+            alu_control_e <= 4'b0000;
+            rd1_e         <= 32'd0;
+            rd2_e         <= 32'd0;
+            imm_ext_e     <= 32'd0;
+            rs1_e         <= 5'd0;
+            rs2_e         <= 5'd0;
+            rd_e          <= 5'd0;
+            pc_e          <= 32'd0;
+            pc_plus4_e    <= 32'd0;
+        end else if (flush_e) begin
+            reg_write_e   <= 1'b0;
+            alu_src_e     <= 1'b0;
+            mem_write_e   <= 1'b0;
+            result_src_e  <= 2'b00;
+            branch_e      <= 1'b0;
+            branch_op_e   <= 3'b000;
+            jump_e        <= 1'b0;
+            jalr_e        <= 1'b0;
             alu_control_e <= 4'b0000;
             rd1_e         <= 32'd0;
             rd2_e         <= 32'd0;
@@ -104,6 +125,7 @@ module Decode_Cycle (
             branch_e      <= branch_d;
             branch_op_e   <= branch_op_d;
             jump_e        <= jump_d;
+            jalr_e        <= jalr_d;
             alu_control_e <= alu_control_d;
             rd1_e         <= rd1_d;
             rd2_e         <= rd2_d;

@@ -1,7 +1,6 @@
 `timescale 1ns / 1ps
 
 module Hazard_Unit (
-    input        rst,
     input  [4:0] rs1_e,
     input  [4:0] rs2_e,
     input  [4:0] rd_m,

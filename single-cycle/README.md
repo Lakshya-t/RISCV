@@ -1,6 +1,6 @@
 # RISC-V (RV32I) Single-Cycle Processor Core
 
-A 32-bit single-cycle processor implementing the base integer subset (**RV32I**) of the RISC-V Instruction Set Architecture (ISA), designed and implemented in Verilog HDL.
+A 32-bit single-cycle processor implementing the base integer subset (**RV32I**) of the RISC-V Instruction Set Architecture (ISA), designed and implemented in synthesizable Verilog HDL.
 
 ---
 
@@ -8,10 +8,10 @@ A 32-bit single-cycle processor implementing the base integer subset (**RV32I**)
 
 - **Architecture:** 32-bit Single-Cycle RISC-V Core (RV32I).
 - **Execution Model:** Non-pipelined, single-cycle execution where each instruction completes in one clock cycle.
-- **Register File:** 32 general-purpose 32-bit registers (`x0`–`x31`) with dual asynchronous read ports and a synchronous clocked write port.
-- **Instruction Memory:** Byte-addressable ROM pre-loaded with a test program covering all supported instruction formats.
-- **Data Memory:** 32-byte synchronous write, asynchronous read RAM storage.
-- **Supported Formats:** Full hardware decode and execution for **R-type**, **I-type** (arithmetic and loads), **S-type** (stores), **B-type** (branches), **U-type** (`LUI`), and **J-type** (`JAL`).
+- **Register File:** 32 general-purpose 32-bit registers (`x0`–`x31`) with dual asynchronous read ports, a synchronous clocked write port, and hardware `x0` constant-zero protection.
+- **Instruction Memory:** 1024-word ROM pre-loaded with a comprehensive self-checking verification program.
+- **Data Memory:** 1024-word (4 KB) synchronous write, asynchronous read RAM storage.
+- **Supported Formats:** Full hardware decode and execution for **R-type**, **I-type** (arithmetic, shifts, and loads), **S-type** (`SW`), **B-type** (all branches), **U-type** (`LUI`, `AUIPC`), and **J-type** (`JAL`, `JALR`).
 
 ---
 
@@ -22,10 +22,10 @@ A 32-bit single-cycle processor implementing the base integer subset (**RV32I**)
 | **Architecture** | RISC-V RV32I | 32-bit Base Integer Instruction Set |
 | **Execution Model** | Single-Cycle | Non-pipelined, CPI = 1.0 (ideal) |
 | **Simulation Clock** | 50 MHz (20 ns period) | Active-high synchronous reset |
-| **Memory Architecture** | Harvard Architecture | Separate byte-addressed ROM (Instructions) & RAM (Data) |
+| **Memory Architecture** | Harvard Architecture | Word-aligned 4 KB ROM (Instructions) & 4 KB RAM (Data) |
 | **Register File** | 32 × 32-bit Registers | Dual asynchronous read ports, single synchronous write port |
 | **Hardwired Zero** | Hardware Protected | Register `x0` reads constant zero; writes to `x0` are discarded |
-| **ALU Operations** | 10 Operations | Arithmetic, logic, shifts, and signed/unsigned comparisons |
+| **ALU Operations** | 10 Operations | Signed/unsigned arithmetic, logic, shifts, and branch flags |
 
 ---
 
@@ -33,17 +33,17 @@ A 32-bit single-cycle processor implementing the base integer subset (**RV32I**)
 
 ```text
 +------------------------------------------------------------------------------------+
-|                                      top_tb.v                                      |
+|                                    top_tb.v                                        |
 |                      (Clock: 50 MHz, Active-High Reset: 100 ns)                    |
 +------------------------------------------+-----------------------------------------+
                                            | clk, reset
                                            v
 +------------------------------------------------------------------------------------+
-|                              top_riscv.v (CPU Core)                                |
+|                               top_riscv.v (CPU Core)                               |
 |                                                                                    |
 |   [ instruction_fetch_unit.v ] ──( PC )──> [ instruction_memory.v (ROM) ]          |
 |               ^                                          |                         |
-|               | (branch target: PC+imm)                  | instruction[31:0]       |
+|               | (branch/jump target: PC+imm, rs1+imm)    | instruction[31:0]       |
 |               |                                          v                         |
 |   +-----------+------------------------------------+   +-----------------------+   |
 |   |           |        data_path.v                 |   |    control_unit.v     |   |
@@ -51,13 +51,13 @@ A 32-bit single-cycle processor implementing the base integer subset (**RV32I**)
 |   |   [ register_file.v (x0-x31) ]                 |   +-----------+-----------+   |
 |   |        | rs1, rs2 data                         |               |               |
 |   |        v                                       |               | alu_control,  |
-|   |   [ alu.v (Math / Logic / Branch Comp) ] <-----+---------------+ lb, sw, lui   |
-|   |        |                                       |                               |
-|   |        +──( branch taken: beq, bne, blt, bge )─+                               |
-|   |        |                                       |                               |
-|   |        v address, store data                   |                               |
-|   |   [ data_memory.v (32-byte RAM) ]              |                               |
-|   +------------------------------------------------+                               |
+|   |   [ alu.v (Math / Logic / Branch Comp) ] <-----+---------------+ mem_write,    |
+|   |        |                                       |               | mem_to_reg,   |
+|   |        +──( branch taken: beq, bne, blt, bge )─+               | jump, jalr    |
+|   |        |                                                       |               |
+|   |        v address, store data (rs2)                             |               |
+|   |   [ data_memory.v (4 KB RAM) ]                                 |               |
+|   +----------------------------------------------------------------+               |
 +------------------------------------------------------------------------------------+
 ```
 
@@ -66,9 +66,10 @@ A 32-bit single-cycle processor implementing the base integer subset (**RV32I**)
 ## 💡 Key Architectural Decisions
 
 - **Hardware Write-Protection for `x0`:** Register `x0` is hardwired to `32'b0`. Any write attempt targeting register index `0` is ignored in hardware, preserving ISA compliance without software overhead.
-- **Immediate Generation:** Dedicated sign-extension and bit-slicing logic handles B-type, S-type, I-type, and U-type immediate layouts directly from the instruction bus.
-- **Integrated Branch Logic:** Branch condition checks (`BEQ`, `BNE`, `BLT`, `BGE`) are computed in the ALU and fed directly to the fetch unit to update the next Program Counter within the same clock period.
-- **Modular Hardware Hierarchy:** Strict separation between control plane (`control_unit.v`), datapath routing (`data_path.v`), register bank (`register_file.v`), and memory sub-systems.
+- **Immediate Generation:** Dedicated sign-extension and bit-slicing logic handles I-type, S-type, B-type, U-type, and J-type immediate layouts directly from the instruction bus.
+- **Integrated Branch Comparator:** Branch condition checks (`BEQ`, `BNE`, `BLT`, `BGE`, `BLTU`, `BGEU`) evaluate signed and unsigned comparisons directly in the ALU to resolve next Program Counter targets within the single-cycle window.
+- **JAL / JALR Return Address Linkage:** Both `JAL` and `JALR` instructions write `PC + 4` into the destination register `rd` (`x1`/`ra`) for subroutine return linkage.
+- **Modular Hardware Hierarchy:** Strict separation between control plane ([`src/control_unit.v`](src/control_unit.v)), datapath routing ([`src/data_path.v`](src/data_path.v)), register bank ([`src/register_file.v`](src/register_file.v)), and memory sub-systems.
 
 ---
 
@@ -82,10 +83,10 @@ A 32-bit single-cycle processor implementing the base integer subset (**RV32I**)
 | [`src/alu.v`](src/alu.v) | `alu` | Arithmetic Logic Unit executing arithmetic, logical shifts, and branch condition comparisons. |
 | [`src/register_file.v`](src/register_file.v) | `register_file` | 32 × 32-bit general-purpose register bank with asynchronous dual reads and synchronous writes. |
 | [`src/instruction_fetch_unit.v`](src/instruction_fetch_unit.v) | `instruction_fetch_unit` | Program Counter (PC) logic managing sequential steps (`PC + 4`), branch targets, and jump links. |
-| [`src/instruction_memory.v`](src/instruction_memory.v) | `instruction_memory` | Byte-addressable ROM pre-loaded with 24 test instructions using little-endian byte ordering. |
-| [`src/data_memory.v`](src/data_memory.v) | `data_memory` | 32-byte RAM for data storage supporting Load (`LW`/`LB`) and Store (`SW`) instructions. |
-| [`src/imm_gen.v`](src/imm_gen.v) | `imm_gen` | Standalone immediate generation module. *(Immediate slicing is handled inline in `top_riscv.v`)*. |
-| [`testbench/top_tb.v`](testbench/top_tb.v) | `top_tb` | Simulation testbench driving system clock (50 MHz) and active-high reset stimulus. |
+| [`src/instruction_memory.v`](src/instruction_memory.v) | `instruction_memory` | 1024-word ROM pre-loaded with the self-checking test suite. |
+| [`src/data_memory.v`](src/data_memory.v) | `data_memory` | 1024-word (4 KB) RAM for synchronous store (`SW`) and asynchronous load (`LW`) operations. |
+| [`src/imm_gen.v`](src/imm_gen.v) | `imm_gen` | Immediate generation module supporting I, S, B, U, and J formats. |
+| [`testbench/top_tb.v`](testbench/top_tb.v) | `top_tb` | Self-checking simulation testbench validating all 19 execution assertions. |
 
 ---
 
@@ -105,52 +106,22 @@ A 32-bit single-cycle processor implementing the base integer subset (**RV32I**)
 | **OR** | `110` | `0000000` | `rd = rs1 \| rs2` | Bitwise OR |
 | **AND** | `111` | `0000000` | `rd = rs1 & rs2` | Bitwise AND |
 
-### 2. I-Type (Immediate Arithmetic & Loads)
-- **Arithmetic (`opcode: 0010011`):** `ADDI`, `SLLI`, `SLTI`, `SLTIU`, `XORI`, `SRLI`, `ORI`, `ANDI`
-- **Loads (`opcode: 0000011`):** `LB`, `LH`, `LW`, `LBU`, `LHU`
+### 2. I-Type (Immediate Arithmetic, Shifts & Loads)
+- **Arithmetic & Shifts (`opcode: 0010011`):** `ADDI`, `SLLI`, `SLTI`, `SLTIU`, `XORI`, `SRLI`, `SRAI`, `ORI`, `ANDI`
+- **Loads (`opcode: 0000011`):** `LW`
+- **JALR (`opcode: 1100111`):** `JALR` (Jump and Link Register: `rd = PC + 4`, `PC = (rs1 + imm) & ~1`)
 
 ### 3. S-Type (Store Instructions) — `opcode: 0100011`
-- `SB` (Store Byte), `SH` (Store Halfword), `SW` (Store Word)
+- `SW` (Store Word)
 
 ### 4. B-Type (Conditional Branches) — `opcode: 1100011`
-- `BEQ` (Branch if Equal), `BNE` (Branch if Not Equal), `BLT` (Branch if Less Than), `BGE` (Branch if Greater or Equal)
+- `BEQ`, `BNE`, `BLT`, `BGE`, `BLTU`, `BGEU`
 - Computes target address: `PC <= PC + sign_extended(offset)`.
 
 ### 5. U-Type & J-Type (Upper Immediate & Jump)
 - **`LUI` (`opcode: 0110111`):** Load Upper Immediate (`rd <= imm[31:12] << 12`).
+- **`AUIPC` (`opcode: 0010111`):** Add Upper Immediate to PC (`rd <= PC + (imm[31:12] << 12)`).
 - **`JAL` (`opcode: 1101111`):** Jump and Link (`PC <= PC + offset`, `rd <= PC + 4`).
-
----
-
-## 📋 Pre-loaded ROM Test Program
-
-[`instruction_memory.v`](instruction_memory.v) comes pre-loaded with 24 instructions that execute sequentially after reset deassertion:
-
-```assembly
-add  x6,  x8,  x9       # R-type ADD
-sub  x1,  x2,  x0       # R-type SUB
-sll  x2,  x1,  x2       # Shift left logical
-xor  x21, x10, x12      # Bitwise XOR
-srl  x21, x10, x12      # Shift right logical
-sra  x30, x26, x27      # Shift right arithmetic
-or   x31, x12, x13      # Bitwise OR
-and  x17, x14, x15      # Bitwise AND
-addi x10, x1,  10       # Add immediate
-slli x6,  x3,  4        # Shift left logical immediate
-xori x14, x5,  63       # XOR immediate
-slti x1,  x2,  10       # Set less than immediate
-srli x1,  x2,  3        # Shift right logical immediate
-ori  x1,  x2,  15       # OR immediate
-andi x1,  x2,  15       # AND immediate
-lw   x5,  4(x6)         # Load word from data memory
-sw   x7,  16(x6)        # Store word into data memory
-beq  x2,  x4,  0        # Branch if equal
-bne  x1,  x2,  8        # Branch if not equal (jumps to PC = 80)
-bge  x3,  x4,  8        # Branch if greater or equal
-blt  x1,  x2,  2        # Branch if less than
-lui  x5,  0x12345       # Load upper immediate
-jal  x1,  8             # Jump and link
-```
 
 ---
 
@@ -158,14 +129,13 @@ jal  x1,  8             # Jump and link
 
 The processor was verified through behavioral simulation:
 - **Zero Warnings / Zero Errors:** Clean compilation and elaboration under standard Verilog simulation environments.
-- **Testbench Execution:** [`top_tb.v`](top_tb.v) applies a 50 MHz clock signal and a 100 ns reset stimulus to confirm power-on state stabilization.
-- **Waveform Inspection:** Signal traces (`waveform.vcd`) confirm correct ALU calculation, Program Counter advancement, branch evaluation, and register writeback cycles.
+- **Self-Checking Testbench:** [`testbench/top_tb.v`](testbench/top_tb.v) applies a 50 MHz clock signal, asserts a 100 ns reset sequence, and automatically asserts that all 19 benchmark test cases execute with mathematically exact results.
+- **Waveform Inspection:** Signal traces (`waveform.vcd`) confirm ALU calculations, branch redirection, jump links, and register writeback cycles.
 
 ---
 
-## 🚀 Future Roadmap
+## 🚀 Future Extensions
 
-- [ ] **Pipelined Core:** Upgrade from single-cycle to a classic 5-stage RISC pipeline (Fetch, Decode, Execute, Memory, Writeback).
-- [ ] **Hazard Handling:** Implement a Hazard Detection Unit and Forwarding Unit to resolve data and control hazards without stalling.
-- [ ] **Memory Sub-system:** Implement byte-enable masking to support sub-word operations (`LB`, `LH`, `SB`, `SH`) across unaligned 32-bit words.
-- [ ] **Privileged Architecture:** Add Control and Status Registers (CSRs) to support timer interrupts and basic trap handling.
+- [ ] **Hardware Multiplier / Divider (M-Extension):** Integrate hardware integer multiplier and divider units.
+- [ ] **Sub-Word Memory Access:** Implement byte-enable masking to support `LB`, `LH`, `SB`, `SH` across unaligned words.
+- [ ] **Privileged Architecture:** Add Control and Status Registers (CSRs) and basic trap/interrupt handling.

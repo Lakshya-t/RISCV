@@ -10,6 +10,7 @@ module Execute_Cycle (
     input         branch_e,
     input  [2:0]  branch_op_e,
     input         jump_e,
+    input         jalr_e,
     input  [3:0]  alu_control_e,
     input  [31:0] rd1_e,
     input  [31:0] rd2_e,
@@ -75,13 +76,6 @@ module Execute_Cycle (
         .less_than_unsigned(less_than_unsigned)
     );
 
-    // Branch Target Calculation: PC + Immediate
-    PC_Adder branch_adder (
-        .a(pc_e),
-        .b(imm_ext_e),
-        .c(pc_target_e)
-    );
-
     // Branch condition evaluation
     always @(*) begin
         case (branch_op_e)
@@ -94,6 +88,11 @@ module Execute_Cycle (
             default: branch_taken = 1'b0;
         endcase
     end
+
+    // Target Address Calculation:
+    // If JALR: target is (rs1 + imm) & ~1
+    // If Branch or JAL: target is PC + imm
+    assign pc_target_e = jalr_e ? ((src_a + imm_ext_e) & ~32'd1) : (pc_e + imm_ext_e);
 
     // Next PC selection flag
     assign pc_src_e = (branch_e & branch_taken) | jump_e;

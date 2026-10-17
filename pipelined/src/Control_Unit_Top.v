@@ -12,11 +12,12 @@ module Control_Unit_Top (
     output reg   branch,
     output reg [2:0] branch_op,
     output reg [3:0] alu_control,
-    output reg   jump
+    output reg   jump,
+    output reg   jalr
 );
 
     always @(*) begin
-        // Default values to prevent latches
+        // Explicit default values to eliminate latches
         reg_write   = 1'b0;
         imm_src     = 3'b000;
         alu_src     = 1'b0;
@@ -26,9 +27,10 @@ module Control_Unit_Top (
         branch_op   = funct3;
         alu_control = 4'b0000;
         jump        = 1'b0;
+        jalr        = 1'b0;
 
         case (opcode)
-            // R-Type arithmetic / logic instructions
+            // R-Type Instructions (opcode: 0110011)
             7'b0110011: begin
                 reg_write  = 1'b1;
                 alu_src    = 1'b0;
@@ -46,7 +48,7 @@ module Control_Unit_Top (
                 endcase
             end
 
-            // I-Type arithmetic / logic with immediate
+            // I-Type Arithmetic & Shifts (opcode: 0010011)
             7'b0010011: begin
                 reg_write  = 1'b1;
                 alu_src    = 1'b1;
@@ -65,7 +67,7 @@ module Control_Unit_Top (
                 endcase
             end
 
-            // Load instructions (LW, LB)
+            // Load Word (opcode: 0000011)
             7'b0000011: begin
                 reg_write   = 1'b1;
                 alu_src     = 1'b1;
@@ -75,7 +77,7 @@ module Control_Unit_Top (
                 alu_control = 4'b0000; // ADD base + offset
             end
 
-            // Store instructions (SW, SB)
+            // Store Word (opcode: 0100011)
             7'b0100011: begin
                 reg_write   = 1'b0;
                 alu_src     = 1'b1;
@@ -85,7 +87,7 @@ module Control_Unit_Top (
                 alu_control = 4'b0000; // ADD base + offset
             end
 
-            // Conditional branch instructions (BEQ, BNE, BLT, BGE)
+            // Conditional Branches (opcode: 1100011)
             7'b1100011: begin
                 reg_write   = 1'b0;
                 alu_src     = 1'b0;
@@ -97,7 +99,7 @@ module Control_Unit_Top (
                 alu_control = 4'b0001; // SUB for comparison
             end
 
-            // LUI (Load Upper Immediate)
+            // LUI (opcode: 0110111)
             7'b0110111: begin
                 reg_write   = 1'b1;
                 alu_src     = 1'b1;
@@ -107,13 +109,33 @@ module Control_Unit_Top (
                 alu_control = 4'b1010; // Pass immediate
             end
 
-            // JAL (Jump and Link)
+            // AUIPC (opcode: 0010111)
+            7'b0010111: begin
+                reg_write   = 1'b1;
+                alu_src     = 1'b1;
+                imm_src     = 3'b100;
+                mem_write   = 1'b0;
+                result_src  = 2'b00;
+                alu_control = 4'b0000; // PC + upper imm
+            end
+
+            // JAL (opcode: 1101111)
             7'b1101111: begin
                 reg_write  = 1'b1;
                 imm_src    = 3'b011;
                 mem_write  = 1'b0;
                 result_src = 2'b10; // PC + 4 to destination reg
                 jump       = 1'b1;
+            end
+
+            // JALR (opcode: 1100111)
+            7'b1100111: begin
+                reg_write  = 1'b1;
+                imm_src    = 3'b000;
+                mem_write  = 1'b0;
+                result_src = 2'b10; // PC + 4 to destination reg
+                jump       = 1'b1;
+                jalr       = 1'b1;
             end
 
             default: begin
@@ -126,6 +148,7 @@ module Control_Unit_Top (
                 branch_op   = 3'b000;
                 alu_control = 4'b0000;
                 jump        = 1'b0;
+                jalr        = 1'b0;
             end
         endcase
     end

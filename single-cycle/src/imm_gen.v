@@ -1,43 +1,30 @@
 `timescale 1ns / 1ps
-//////////////////////////////////////////////////////////////////////////////////
-// Design Name: 
-// Module Name: imm_gen
-//////////////////////////////////////////////////////////////////////////////////
 
-// immediate generator module
-// extracts the 12-bit immediate field from I-type instructions (opcode 0010011)
-// Note: In top_riscv.v, immediate extraction for all instruction types (I, B, U, J)
-// is handled directly using continuous assign statements.
+module imm_gen (
+    input  [31:0] instr,
+    input  [2:0]  imm_src,
+    output reg [31:0] imm_ext
+);
 
-module imm_gen(
-    input [31:0] instr_memory,         // 32-bit instruction code
-    output [31:0] imm_val_r            // sign-extended immediate output
-    );
-    
-    reg [6:0] opcode; 
-    reg [31:0] imm_val_reg;
-    
-    // extract 7-bit opcode field (bits 6:0 of instruction)
-    always@(*)
-        begin
-            opcode = instr_memory[6:0];
-        end
-        
-    // decode immediate based on opcode
-    always@(*)
-        begin
-            // if I-type arithmetic instruction (e.g. ADDI, SLTI, ORI)
-            if(opcode == 7'b001_0011)
-                begin
-                    // extract bits 31:20 (12-bit immediate)
-                    imm_val_reg = {{20{instr_memory[31]}}, instr_memory[31:20]};
-                end
-            else
-                begin
-                    imm_val_reg = 32'd0;
-                end
-        end
-        
-    assign imm_val_r = imm_val_reg;
-                              
+    always @(*) begin
+        case (imm_src)
+            // I-Type immediate (Arithmetic, Loads, JALR)
+            3'b000: imm_ext = {{20{instr[31]}}, instr[31:20]};
+
+            // S-Type immediate (Stores)
+            3'b001: imm_ext = {{20{instr[31]}}, instr[31:25], instr[11:7]};
+
+            // B-Type immediate (Branches)
+            3'b010: imm_ext = {{20{instr[31]}}, instr[7], instr[30:25], instr[11:8], 1'b0};
+
+            // J-Type immediate (JAL)
+            3'b011: imm_ext = {{12{instr[31]}}, instr[19:12], instr[20], instr[30:21], 1'b0};
+
+            // U-Type immediate (LUI, AUIPC)
+            3'b100: imm_ext = {instr[31:12], 12'b0};
+
+            default: imm_ext = 32'd0;
+        endcase
+    end
+
 endmodule

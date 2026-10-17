@@ -49,10 +49,14 @@ module Fetch_Cycle (
         .read_data(instr_f)
     );
 
-    // IF/ID Pipeline Register
+    // IF/ID Pipeline Register: Synthesizable priority (async reset > sync flush > enable)
     always @(posedge clk or negedge rst) begin
-        if (rst == 1'b0 || flush_d) begin
+        if (rst == 1'b0) begin
             instr_d    <= 32'h00000013; // NOP (addi x0, x0, 0)
+            pc_d       <= 32'd0;
+            pc_plus4_d <= 32'd0;
+        end else if (flush_d) begin
+            instr_d    <= 32'h00000013; // NOP (flush bubble)
             pc_d       <= 32'd0;
             pc_plus4_d <= 32'd0;
         end else if (!stall_d) begin
