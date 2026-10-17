@@ -65,22 +65,26 @@ module control_unit (
                 endcase
             end
 
-            // Load Word (opcode: 0000011)
+            // Load Word (opcode: 0000011) - LW only (funct3 == 3'b010)
             7'b0000011: begin
-                reg_write   = 1'b1;
-                alu_src     = 1'b1;
-                imm_src     = 3'b000;
-                mem_to_reg  = 1'b1;
-                alu_control = 4'b0000; // ADD base + offset
+                if (funct3 == 3'b010) begin
+                    reg_write   = 1'b1;
+                    alu_src     = 1'b1;
+                    imm_src     = 3'b000;
+                    mem_to_reg  = 1'b1;
+                    alu_control = 4'b0000; // ADD base + offset
+                end
             end
 
-            // Store Word (opcode: 0100011)
+            // Store Word (opcode: 0100011) - SW only (funct3 == 3'b010)
             7'b0100011: begin
-                reg_write   = 1'b0;
-                alu_src     = 1'b1;
-                imm_src     = 3'b001;
-                mem_write   = 1'b1;
-                alu_control = 4'b0000; // ADD base + offset
+                if (funct3 == 3'b010) begin
+                    reg_write   = 1'b0;
+                    alu_src     = 1'b1;
+                    imm_src     = 3'b001;
+                    mem_write   = 1'b1;
+                    alu_control = 4'b0000; // ADD base + offset
+                end
             end
 
             // Conditional Branches (opcode: 1100011)
