@@ -11,6 +11,7 @@ module Execute_Cycle (
     input  [2:0]  branch_op_e,
     input         jump_e,
     input         jalr_e,
+    input         auipc_e,
     input  [3:0]  alu_control_e,
     input  [31:0] rd1_e,
     input  [31:0] rd2_e,
@@ -33,6 +34,7 @@ module Execute_Cycle (
 );
 
     wire [31:0] src_a;
+    wire [31:0] alu_src_a;
     wire [31:0] src_b_forwarded;
     wire [31:0] src_b;
     wire [31:0] alu_out;
@@ -47,6 +49,9 @@ module Execute_Cycle (
         .s(forward_a_e),
         .d(src_a)
     );
+
+    // ALU Operand A Multiplexer: Select PC for AUIPC (after forwarding mux)
+    assign alu_src_a = auipc_e ? pc_e : src_a;
 
     // 3:1 Mux for Operand B Forwarding
     Mux_3_by_1 forward_mux_b (
@@ -67,7 +72,7 @@ module Execute_Cycle (
 
     // Arithmetic Logic Unit (ALU)
     ALU alu_inst (
-        .a(src_a),
+        .a(alu_src_a),
         .b(src_b),
         .alu_control(alu_control_e),
         .alu_result(alu_out),

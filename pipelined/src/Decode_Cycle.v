@@ -20,6 +20,7 @@ module Decode_Cycle (
     output reg [2:0] branch_op_e,
     output reg    jump_e,
     output reg    jalr_e,
+    output reg    auipc_e,
     output reg [3:0] alu_control_e,
     output reg [31:0] rd1_e,
     output reg [31:0] rd2_e,
@@ -32,7 +33,7 @@ module Decode_Cycle (
 );
 
     // Combinational signals in Decode stage
-    wire reg_write_d, alu_src_d, mem_write_d, branch_d, jump_d, jalr_d;
+    wire reg_write_d, alu_src_d, mem_write_d, branch_d, jump_d, jalr_d, auipc_d;
     wire [1:0] result_src_d;
     wire [2:0] imm_src_d;
     wire [2:0] branch_op_d;
@@ -56,7 +57,8 @@ module Decode_Cycle (
         .branch_op(branch_op_d),
         .alu_control(alu_control_d),
         .jump(jump_d),
-        .jalr(jalr_d)
+        .jalr(jalr_d),
+        .auipc(auipc_d)
     );
 
     // Register File (32 x 32-bit registers)
@@ -90,6 +92,7 @@ module Decode_Cycle (
             branch_op_e   <= 3'b000;
             jump_e        <= 1'b0;
             jalr_e        <= 1'b0;
+            auipc_e       <= 1'b0;
             alu_control_e <= 4'b0000;
             rd1_e         <= 32'd0;
             rd2_e         <= 32'd0;
@@ -108,6 +111,7 @@ module Decode_Cycle (
             branch_op_e   <= 3'b000;
             jump_e        <= 1'b0;
             jalr_e        <= 1'b0;
+            auipc_e       <= 1'b0;
             alu_control_e <= 4'b0000;
             rd1_e         <= 32'd0;
             rd2_e         <= 32'd0;
@@ -126,6 +130,7 @@ module Decode_Cycle (
             branch_op_e   <= branch_op_d;
             jump_e        <= jump_d;
             jalr_e        <= jalr_d;
+            auipc_e       <= auipc_d;
             alu_control_e <= alu_control_d;
             rd1_e         <= rd1_d;
             rd2_e         <= rd2_d;

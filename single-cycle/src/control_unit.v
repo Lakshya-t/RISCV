@@ -13,6 +13,7 @@ module control_unit (
     output reg [2:0] branch_op,
     output reg   jump,
     output reg   jalr,
+    output reg   auipc,
     output reg [3:0] alu_control
 );
 
@@ -27,6 +28,7 @@ module control_unit (
         branch_op   = funct3;
         jump        = 1'b0;
         jalr        = 1'b0;
+        auipc       = 1'b0;
         alu_control = 4'b0000;
 
         case (opcode)
@@ -104,6 +106,7 @@ module control_unit (
                 reg_write   = 1'b1;
                 alu_src     = 1'b1;
                 imm_src     = 3'b100;
+                auipc       = 1'b1;
                 alu_control = 4'b0000; // PC + upper imm
             end
 

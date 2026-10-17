@@ -13,7 +13,8 @@ module Control_Unit_Top (
     output reg [2:0] branch_op,
     output reg [3:0] alu_control,
     output reg   jump,
-    output reg   jalr
+    output reg   jalr,
+    output reg   auipc
 );
 
     always @(*) begin
@@ -28,6 +29,7 @@ module Control_Unit_Top (
         alu_control = 4'b0000;
         jump        = 1'b0;
         jalr        = 1'b0;
+        auipc       = 1'b0;
 
         case (opcode)
             // R-Type Instructions (opcode: 0110011)
@@ -116,6 +118,7 @@ module Control_Unit_Top (
                 imm_src     = 3'b100;
                 mem_write   = 1'b0;
                 result_src  = 2'b00;
+                auipc       = 1'b1;
                 alu_control = 4'b0000; // PC + upper imm
             end
 

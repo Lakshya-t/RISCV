@@ -20,6 +20,7 @@ module Pipeline_Top (
     wire [2:0]  branch_op_e;
     wire        jump_e;
     wire        jalr_e;
+    wire        auipc_e;
     wire [3:0]  alu_control_e;
     wire [31:0] rd1_e, rd2_e, imm_ext_e;
     wire [4:0]  rs1_e, rs2_e, rd_e;
@@ -86,6 +87,7 @@ module Pipeline_Top (
         .branch_op_e(branch_op_e),
         .jump_e(jump_e),
         .jalr_e(jalr_e),
+        .auipc_e(auipc_e),
         .alu_control_e(alu_control_e),
         .rd1_e(rd1_e),
         .rd2_e(rd2_e),
@@ -109,6 +111,7 @@ module Pipeline_Top (
         .branch_op_e(branch_op_e),
         .jump_e(jump_e),
         .jalr_e(jalr_e),
+        .auipc_e(auipc_e),
         .alu_control_e(alu_control_e),
         .rd1_e(rd1_e),
         .rd2_e(rd2_e),

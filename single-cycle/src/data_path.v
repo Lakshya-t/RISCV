@@ -16,6 +16,7 @@ module data_path (
     input  [2:0]  branch_op,
     input         jump,
     input         jalr,
+    input         auipc,
     input  [31:0] pc,
     input  [31:0] pc_plus4,
     output        pc_src,
@@ -25,6 +26,7 @@ module data_path (
     wire [31:0] src1;
     wire [31:0] src2_reg;
     wire [31:0] src2;
+    wire [31:0] alu_src1;
     wire [31:0] alu_result;
     wire [31:0] mem_read_data;
     wire [31:0] write_back_data;
@@ -44,12 +46,15 @@ module data_path (
         .read_data2(src2_reg)
     );
 
+    // ALU input A selection (Register vs PC for AUIPC)
+    assign alu_src1 = auipc ? pc : src1;
+
     // ALU input B selection (Register vs Immediate)
     assign src2 = alu_src ? imm_ext : src2_reg;
 
     // Arithmetic Logic Unit
     alu alu_inst (
-        .src1(src1),
+        .src1(alu_src1),
         .src2(src2),
         .alu_control(alu_control),
         .result(alu_result),

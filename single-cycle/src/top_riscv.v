@@ -24,6 +24,7 @@ module top_riscv (
     wire [2:0]  branch_op;
     wire        jump;
     wire        jalr;
+    wire        auipc;
     wire [3:0]  alu_control;
 
     // Immediate extension
@@ -59,6 +60,7 @@ module top_riscv (
         .branch_op(branch_op),
         .jump(jump),
         .jalr(jalr),
+        .auipc(auipc),
         .alu_control(alu_control)
     );
 
@@ -86,6 +88,7 @@ module top_riscv (
         .branch_op(branch_op),
         .jump(jump),
         .jalr(jalr),
+        .auipc(auipc),
         .pc(pc),
         .pc_plus4(pc_plus4),
         .pc_src(pc_src),
