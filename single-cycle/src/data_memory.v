@@ -19,7 +19,7 @@ module data_memory (
     // Synchronous write
     always @(posedge clk) begin
         if (rst) begin
-            for (i = 0; i < 64; i = i + 1) begin
+            for (i = 0; i < 1024; i = i + 1) begin
                 memory[i] <= 32'd0;
             end
         end else if (mem_write) begin
