@@ -80,13 +80,13 @@ Both processors provide hardware decode and execution for the base integer subse
 - **Conditional Branches:** `BEQ`, `BNE`, `BLT`, `BGE`, `BLTU`, `BGEU`
 - **Upper Immediate & Jumps:** `LUI`, `AUIPC`, `JAL`, `JALR`
 
-*Note: Environment call/break (`ECALL`, `EBREAK`), memory barrier (`FENCE`), and sub-word accesses (`LB`, `LH`, `SB`, `SH`) default to safe NOP operations without state modification.*
+*Note: Environment call/break (`ECALL`, `EBREAK`), memory barrier (`FENCE`), and sub-word accesses (`LB`, `LH`, `LBU`, `LHU`, `SB`, `SH`) default to safe NOP operations without state modification.*
 
 ---
 
 ## 🔬 Simulation & Verification
 
-Both cores are verified through comprehensive behavioral simulation with 0 compilation errors and 0 warnings under standard tool flags. Each testbench performs 32 automated self-checking assertions and terminates with a non-zero exit code on failure.
+Both cores are verified through comprehensive behavioral simulation with 0 compilation errors and 0 warnings under standard tool flags. Each testbench performs 34 automated self-checking assertions and terminates with a non-zero exit code on failure.
 
 ### Running the Single-Cycle Core
 ```bash

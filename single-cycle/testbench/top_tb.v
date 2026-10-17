@@ -41,8 +41,8 @@ module top_tb;
         reset <= 1'b0;
         $display("[INFO] Time %0t ps: Reset de-asserted. Single-cycle execution started...\n", $time);
 
-        // Run for 60 cycles (all instructions complete)
-        repeat (60) begin
+        // Run for 70 cycles (all instructions complete)
+        repeat (70) begin
             @(posedge clk);
             cycle_count = cycle_count + 1;
         end
@@ -54,7 +54,7 @@ module top_tb;
         $display("Total Simulated Cycles: %0d", cycle_count);
         $display("--------------------------------------------------------------------------");
         $display("Register File Verification:");
-        $display("  x1  (jal link)       = 0x%08h (Expected: 0x000000c0)", dut.dpu.rf.registers[1]);
+        $display("  x1  (jal link)       = 0x%08h (Expected: 0x000000dc)", dut.dpu.rf.registers[1]);
         $display("  x2  (sll 5<<3)       = %0d (Expected: 40)",         dut.dpu.rf.registers[2]);
         $display("  x3  (srl 40>>3)      = %0d (Expected: 5)",          dut.dpu.rf.registers[3]);
         $display("  x4  (addi -16)       = %0d (Expected: -16)",        $signed(dut.dpu.rf.registers[4]));
@@ -70,7 +70,7 @@ module top_tb;
         $display("  x14 (lw from RAM[0]) = %0d (Expected: 88)",         dut.dpu.rf.registers[14]);
         $display("  x15 (load-use+12)    = %0d (Expected: 100)",        dut.dpu.rf.registers[15]);
         $display("  x16 (lui 0x12345)    = 0x%08h (Expected: 0x12345000)", dut.dpu.rf.registers[16]);
-        $display("  x17 (jalr link)      = 0x%08h (Expected: 0x000000cc)", dut.dpu.rf.registers[17]);
+        $display("  x17 (jalr link)      = 0x%08h (Expected: 0x000000e8)", dut.dpu.rf.registers[17]);
         $display("  x18 (flushed trap)   = %0d (Expected: 0, FLUSHED)", dut.dpu.rf.registers[18]);
         $display("  x19 (final marker)   = %0d (Expected: 42)",         dut.dpu.rf.registers[19]);
         $display("  x20 (sra -16>>>3)    = %0d (Expected: -2)",         $signed(dut.dpu.rf.registers[20]));
@@ -83,15 +83,17 @@ module top_tb;
         $display("  x27 (lw RAM[1]->br)  = %0d (Expected: 100)",        dut.dpu.rf.registers[27]);
         $display("  x28 (auipc)          = 0x%08h (Expected: 0x0000206c)", dut.dpu.rf.registers[28]);
         $display("  x29 (loop count)     = %0d (Expected: 0)",          dut.dpu.rf.registers[29]);
-        $display("  x30 (jalr odd tgt)   = %0d (Expected: 209)",        dut.dpu.rf.registers[30]);
+        $display("  x30 (jalr odd tgt)   = %0d (Expected: 237)",        dut.dpu.rf.registers[30]);
+        $display("  x31 (auipc pad / br) = 0x%08h (Expected: 0x000000ec)", dut.dpu.rf.registers[31]);
         $display("--------------------------------------------------------------------------");
         $display("Data Memory Verification:");
         $display("  Data_RAM[0]          = %0d (Expected: 88)", dut.dpu.dmem.memory[0]);
         $display("  Data_RAM[1]          = %0d (Expected: 100)", dut.dpu.dmem.memory[1]);
+        $display("  Data_RAM[2] (br cnt) = %0d (Expected: 6)",  dut.dpu.dmem.memory[2]);
         $display("--------------------------------------------------------------------------");
 
-        // Self-checking assertions (32 checks)
-        if (dut.dpu.rf.registers[1]  !== 32'h000000c0) error_count = error_count + 1;
+        // Self-checking assertions (34 checks)
+        if (dut.dpu.rf.registers[1]  !== 32'h000000dc) error_count = error_count + 1;
         if (dut.dpu.rf.registers[2]  !== 40)           error_count = error_count + 1;
         if (dut.dpu.rf.registers[3]  !== 5)            error_count = error_count + 1;
         if (dut.dpu.rf.registers[4]  !== 32'hfffffff0) error_count = error_count + 1;
@@ -107,7 +109,7 @@ module top_tb;
         if (dut.dpu.rf.registers[14] !== 88)           error_count = error_count + 1;
         if (dut.dpu.rf.registers[15] !== 100)          error_count = error_count + 1;
         if (dut.dpu.rf.registers[16] !== 32'h12345000) error_count = error_count + 1;
-        if (dut.dpu.rf.registers[17] !== 32'h000000cc) error_count = error_count + 1;
+        if (dut.dpu.rf.registers[17] !== 32'h000000e8) error_count = error_count + 1;
         if (dut.dpu.rf.registers[18] !== 0)            error_count = error_count + 1; // Flushed / skipped
         if (dut.dpu.rf.registers[19] !== 42)           error_count = error_count + 1;
         if (dut.dpu.rf.registers[20] !== 32'hfffffffe) error_count = error_count + 1;
@@ -120,12 +122,14 @@ module top_tb;
         if (dut.dpu.rf.registers[27] !== 100)          error_count = error_count + 1;
         if (dut.dpu.rf.registers[28] !== 32'h0000206c) error_count = error_count + 1;
         if (dut.dpu.rf.registers[29] !== 0)            error_count = error_count + 1;
-        if (dut.dpu.rf.registers[30] !== 209)          error_count = error_count + 1;
+        if (dut.dpu.rf.registers[30] !== 237)          error_count = error_count + 1;
+        if (dut.dpu.rf.registers[31] !== 32'h000000ec) error_count = error_count + 1;
         if (dut.dpu.dmem.memory[0]   !== 88)           error_count = error_count + 1;
         if (dut.dpu.dmem.memory[1]   !== 100)          error_count = error_count + 1;
+        if (dut.dpu.dmem.memory[2]   !== 6)            error_count = error_count + 1;
 
         if (error_count == 0) begin
-            $display(">>> SINGLE-CYCLE TEST PASSED: ALL 32 INSTRUCTION CHECKS FULLY VERIFIED! <<<");
+            $display(">>> SINGLE-CYCLE TEST PASSED: ALL 34 INSTRUCTION CHECKS FULLY VERIFIED! <<<");
         end else begin
             $display(">>> SINGLE-CYCLE TEST FAILED: %0d assertion error(s) encountered! <<<", error_count);
             $fatal(1, "Single-cycle verification suite failed!");
