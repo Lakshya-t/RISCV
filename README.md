@@ -41,7 +41,8 @@ RISCV/
 │   │   └── imm_gen.v              # Immediate generation module
 │   ├── testbench/                 # Testbench files
 │   │   └── top_tb.v               # Single-cycle self-checking testbench
-│   ├── run_sim.sh                 # One-click simulation script
+│   ├── run_sim.do                 # ModelSim / QuestaSim simulation macro
+│   ├── run_sim.sh                 # Simulation shell script (auto-detects ModelSim)
 │   └── README.md                  # Detailed single-cycle architecture documentation
 │
 └── pipelined/                     # 5-Stage Pipelined RV32I Processor Core
@@ -64,7 +65,8 @@ RISCV/
     │   └── Mux.v                  # Parameterized 2:1 and 3:1 multiplexers
     ├── testbench/
     │   └── pipeline_tb.v          # Pipelined testbench with waveform dumping and assertions
-    ├── run_sim.sh                 # One-click pipelined simulation script
+    ├── run_sim.do                 # ModelSim / QuestaSim simulation macro
+    ├── run_sim.sh                 # Simulation shell script (auto-detects ModelSim)
     └── README.md                  # Detailed 5-stage pipeline architecture documentation
 ```
 
@@ -86,18 +88,33 @@ Both processors provide hardware decode and execution for the base integer subse
 
 ## 🔬 Simulation & Verification
 
-Both cores are verified through comprehensive behavioral simulation with 0 compilation errors and 0 warnings under standard tool flags. Each testbench performs 34 automated self-checking assertions and terminates with a non-zero exit code on failure.
+Both cores are fully verified through comprehensive behavioral simulation in **Mentor Graphics / Siemens ModelSim** (and QuestaSim) with 0 compilation errors and 0 warnings. Each testbench performs 34 automated self-checking assertions and terminates with a non-zero exit code on failure.
 
-### Running the Single-Cycle Core
+### Option 1: Running in ModelSim / QuestaSim (CLI or GUI)
+Dedicated TCL simulation macros (`run_sim.do`) are provided in both processor directories:
+
 ```bash
+# ModelSim Batch / CLI Mode
 cd single-cycle
-./run_sim.sh
-```
-*Executes the benchmark program and outputs automated self-checking assertion results.*
+vsim -c -do run_sim.do
 
-### Running the 5-Stage Pipelined Core
-```bash
-cd pipelined
-./run_sim.sh
+# Or via GUI (launches waveform viewer with preloaded signals)
+vsim -do run_sim.do
 ```
-*Executes the benchmark program and outputs real-time forwarding, stall, and flush events.*
+
+```bash
+# ModelSim Batch / CLI Mode for 5-Stage Pipelined Core
+cd pipelined
+vsim -c -do run_sim.do
+
+# Or via GUI
+vsim -do run_sim.do
+```
+
+### Option 2: Running via Shell Script
+The provided `run_sim.sh` scripts automatically detect and execute ModelSim (`vsim` / `vlog`), with built-in fallback support for open-source simulators:
+
+```bash
+cd single-cycle && ./run_sim.sh
+cd pipelined && ./run_sim.sh
+```

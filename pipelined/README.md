@@ -86,6 +86,8 @@ A 32-bit 5-stage pipelined processor implementing the base integer subset (**RV3
 | [`src/PC_Adder.v`](src/PC_Adder.v) | `PC_Adder` | IF/EX | 32-bit adder for PC increments and branch target calculation. |
 | [`src/Mux.v`](src/Mux.v) | `Mux`, `Mux_3_by_1` | - | 2-to-1 and 3-to-1 parameterized multiplexers. |
 | [`testbench/pipeline_tb.v`](testbench/pipeline_tb.v) | `pipeline_tb` | TB | Self-checking testbench validating all 34 execution assertions with automated pass/fail report. |
+| [`run_sim.do`](run_sim.do) | - | Script | ModelSim / QuestaSim macro for automated compilation, waveform setup, and execution. |
+| [`run_sim.sh`](run_sim.sh) | - | Script | Shell simulation runner with automatic ModelSim detection and execution. |
 
 ---
 
@@ -127,7 +129,7 @@ A 32-bit 5-stage pipelined processor implementing the base integer subset (**RV3
 
 ## 🔬 Verification & Validation
 
-The pipelined processor was tested and validated through behavioural simulation:
-- **Zero Warnings / Zero Errors:** Clean elaboration and zero warnings under RTL behavioral simulation.
+The pipelined processor was tested and validated through behavioral simulation using **Mentor Graphics / Siemens ModelSim**:
+- **Zero Warnings / Zero Errors:** Clean elaboration and zero warnings under ModelSim RTL behavioral simulation (`vlog` / `vsim`).
 - **Hazard Suite Validation:** The test sequence in [`src/Instruction_Memory.v`](src/Instruction_Memory.v) exercises back-to-back RAW dependencies (verifying EX-to-EX and MEM-to-EX forwarding), store-data forwarding, load-use dependencies into arithmetic and branch instructions, conditional branch flushes, and loop branch redirection, validating all 34 self-checking assertions and exiting non-zero on failure.
-- **Waveform Inspection:** Complete signal transitions, pipeline registers, and forwarding multiplexers can be viewed via GTKWave (`pipeline_waveform.vcd`).
+- **Waveform Inspection:** Complete signal transitions, pipeline registers, and forwarding multiplexers can be viewed in the ModelSim Wave Viewer (via `run_sim.do`) or exported to VCD (`pipeline_waveform.vcd`).

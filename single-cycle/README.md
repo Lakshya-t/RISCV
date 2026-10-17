@@ -87,6 +87,8 @@ A 32-bit single-cycle processor implementing the base integer subset (**RV32I**)
 | [`src/data_memory.v`](src/data_memory.v) | `data_memory` | 1024-word (4 KB) RAM for synchronous store (`SW`) and asynchronous load (`LW`) operations. |
 | [`src/imm_gen.v`](src/imm_gen.v) | `imm_gen` | Immediate generation module supporting I, S, B, U, and J formats. |
 | [`testbench/top_tb.v`](testbench/top_tb.v) | `top_tb` | Self-checking simulation testbench validating all 34 execution assertions. |
+| [`run_sim.do`](run_sim.do) | - | ModelSim / QuestaSim macro for automated compilation, waveform setup, and execution. |
+| [`run_sim.sh`](run_sim.sh) | - | Shell simulation runner with automatic ModelSim detection and execution. |
 
 ---
 
@@ -128,10 +130,10 @@ A 32-bit single-cycle processor implementing the base integer subset (**RV32I**)
 
 ## 🔬 Verification & Validation
 
-The processor was verified through behavioral simulation:
-- **Zero Warnings / Zero Errors:** Clean compilation and elaboration under standard Verilog simulation environments.
+The single-cycle processor was verified through behavioral simulation using **Mentor Graphics / Siemens ModelSim**:
+- **Zero Warnings / Zero Errors:** Clean compilation and elaboration under ModelSim (`vlog` / `vsim`).
 - **Self-Checking Testbench:** [`testbench/top_tb.v`](testbench/top_tb.v) applies a 50 MHz clock signal, asserts a 100 ns reset sequence, and automatically asserts that all 34 benchmark test cases execute with mathematically exact results, terminating with a non-zero exit code on any failure.
-- **Waveform Inspection:** Signal traces (`waveform.vcd`) confirm ALU calculations, branch redirection, jump links, and register writeback cycles.
+- **Waveform Inspection:** Signal traces can be visualized directly in the ModelSim Wave window (via `run_sim.do`) or exported to VCD (`waveform.vcd`).
 
 ---
 

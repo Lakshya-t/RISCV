@@ -6,6 +6,12 @@ pipe_sim
 waveform.vcd
 *.out
 
+# ModelSim / QuestaSim artifacts
+work/
+transcript
+*.wlf
+modelsim.ini
+
 # OS generated files
 .DS_Store
 *.swp
