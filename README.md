@@ -1,171 +1,102 @@
-# RISC-V (RV32I) Single-Cycle Processor Core
+# RISC-V (RV32I) Processor Cores in Verilog
 
-A 32-bit single-cycle processor implementing the base integer subset (**RV32I**) of the RISC-V Instruction Set Architecture (ISA), designed and implemented in Verilog HDL.
+This repository contains two complete hardware implementations of the 32-bit RISC-V Instruction Set Architecture (**RV32I** Base Integer Subset) designed in synthesizable Verilog HDL:
 
----
-
-## 📌 Features
-
-- **Architecture:** 32-bit Single-Cycle RISC-V Core (RV32I).
-- **Execution Model:** Non-pipelined, single-cycle execution where each instruction completes in one clock cycle.
-- **Register File:** 32 general-purpose 32-bit registers (`x0`–`x31`) with dual asynchronous read ports and a synchronous clocked write port.
-- **Instruction Memory:** Byte-addressable ROM pre-loaded with a test program covering all supported instruction formats.
-- **Data Memory:** 32-byte synchronous write, asynchronous read RAM storage.
-- **Supported Formats:** Full hardware decode and execution for **R-type**, **I-type** (arithmetic and loads), **S-type** (stores), **B-type** (branches), **U-type** (`LUI`), and **J-type** (`JAL`).
+1. **[`single-cycle/`](single-cycle/):** A non-pipelined, single-cycle baseline processor serving as the functional golden verification model.
+2. **[`pipelined/`](pipelined/):** A high-throughput 5-stage classic RISC pipelined processor with dynamic data forwarding, load-use hazard stalling, and branch flushing.
 
 ---
 
-## 📊 Microarchitecture Specifications
+## 📊 Microarchitecture Comparison
 
-| Parameter | Specification | Details |
+| Feature | Single-Cycle Core (`single-cycle/`) | 5-Stage Pipelined Core (`pipelined/`) |
 | :--- | :--- | :--- |
-| **Architecture** | RISC-V RV32I | 32-bit Base Integer Instruction Set |
-| **Execution Model** | Single-Cycle | Non-pipelined, CPI = 1.0 (ideal) |
-| **Simulation Clock** | 50 MHz (20 ns period) | Active-high synchronous reset |
-| **Memory Architecture** | Harvard Architecture | Separate byte-addressed ROM (Instructions) & RAM (Data) |
-| **Register File** | 32 × 32-bit Registers | Dual asynchronous read ports, single synchronous write port |
-| **Hardwired Zero** | Hardware Protected | Register `x0` reads constant zero; writes to `x0` are discarded |
-| **ALU Operations** | 10 Operations | Arithmetic, logic, shifts, and signed/unsigned comparisons |
+| **Pipeline Stages** | 1 (Non-pipelined) | 5 (IF, ID, EX, MEM, WB) |
+| **Clock Frequency** | 50 MHz (20 ns cycle period) | 50 MHz+ (decomposed critical path) |
+| **Ideal CPI** | 1.0 | 1.0 (approaching) |
+| **Data Hazards** | N/A (completed in one cycle) | Resolved via EX-to-EX & MEM-to-EX Forwarding |
+| **Load-Use Hazards** | N/A | Hardware detection with 1-cycle stall bubble |
+| **Control Hazards** | Single-cycle branch resolution | Evaluated in EX; 2-cycle flush penalty on branch taken |
+| **Memory Model** | Harvard (Separate byte ROM & RAM) | Harvard (Word-aligned 4 KB ROM & RAM) |
+| **Register File** | 32 × 32-bit, `x0` hardwired to 0 | 32 × 32-bit, `x0` hardwired to 0 + internal write bypass |
+| **Supported ISA** | RV32I (R, I, S, B, U, J) | RV32I (R, I, S, B, U, J) |
 
 ---
 
-## 🏗️ Core Architecture Block Diagram
+## 📁 Repository Organization
 
 ```text
-+------------------------------------------------------------------------------------+
-|                                      top_tb.v                                      |
-|                      (Clock: 50 MHz, Active-High Reset: 100 ns)                    |
-+------------------------------------------+-----------------------------------------+
-                                           | clk, reset
-                                           v
-+------------------------------------------------------------------------------------+
-|                              top_riscv.v (CPU Core)                                |
-|                                                                                    |
-|   [ instruction_fetch_unit.v ] ──( PC )──> [ instruction_memory.v (ROM) ]          |
-|               ^                                          |                         |
-|               | (branch target: PC+imm)                  | instruction[31:0]       |
-|               |                                          v                         |
-|   +-----------+------------------------------------+   +-----------------------+   |
-|   |           |        data_path.v                 |   |    control_unit.v     |   |
-|   |           |                                    |   |   (Decoder Brain)     |   |
-|   |   [ register_file.v (x0-x31) ]                 |   +-----------+-----------+   |
-|   |        | rs1, rs2 data                         |               |               |
-|   |        v                                       |               | alu_control,  |
-|   |   [ alu.v (Math / Logic / Branch Comp) ] <-----+---------------+ lb, sw, lui   |
-|   |        |                                       |                               |
-|   |        +──( branch taken: beq, bne, blt, bge )─+                               |
-|   |        |                                       |                               |
-|   |        v address, store data                   |                               |
-|   |   [ data_memory.v (32-byte RAM) ]              |                               |
-|   +------------------------------------------------+                               |
-+------------------------------------------------------------------------------------+
+RISC-V/
+├── README.md                      # Root repository overview and architectural comparison
+├── single-cycle/                  # Single-Cycle RV32I Processor Core
+│   ├── src/                       # Design source files
+│   │   ├── top_riscv.v            # Top-level single-cycle core
+│   │   ├── data_path.v            # Datapath routing logic
+│   │   ├── control_unit.v         # Opcode & funct decoder
+│   │   ├── register_file.v        # 32 x 32-bit register file (x0 write protected)
+│   │   ├── alu.v                  # Arithmetic Logic Unit (10 operations + branch comp)
+│   │   ├── instruction_fetch_unit.v # Program Counter and sequential step logic
+│   │   ├── instruction_memory.v   # 24-instruction preloaded ROM
+│   │   ├── data_memory.v          # 32-byte synchronous RAM
+│   │   └── imm_gen.v              # Immediate generation module
+│   ├── testbench/                 # Testbench files
+│   │   └── top_tb.v               # Single-cycle testbench
+│   ├── run_sim.sh                 # One-click simulation script
+│   └── README.md                  # Detailed single-cycle architecture documentation
+│
+└── pipelined/                     # 5-Stage Pipelined RV32I Processor Core
+    ├── src/
+    │   ├── Pipeline_Top.v         # Top-level 5-stage pipelined processor
+    │   ├── Fetch_Cycle.v          # Instruction Fetch stage (IF) with stall/flush
+    │   ├── Decode_Cycle.v         # Instruction Decode stage (ID) with IF/ID registers
+    │   ├── Execute_Cycle.v        # Execute stage (EX) with ALU, branch comp, & ID/EX
+    │   ├── Memory_Cycle.v         # Memory Access stage (MEM) with EX/MEM registers
+    │   ├── Writeback_Cycle.v      # Writeback stage (WB) with 3:1 result multiplexer
+    │   ├── Hazard_Unit.v          # Forwarding unit, load-use detector, & flusher
+    │   ├── ALU.v                  # 32-bit ALU with signed/unsigned comparison flags
+    │   ├── Control_Unit_Top.v     # Pipelined instruction decoder
+    │   ├── Register_File.v        # Register bank with x0 protection & internal bypass
+    │   ├── Instruction_Memory.v   # 1024-word preloaded ROM (24-instruction suite)
+    │   ├── Data_Memory.v          # 1024-word RAM (4 KB)
+    │   ├── Sign_Extend.v          # Immediate generator for I, S, B, J, and U (LUI)
+    │   ├── PC.v                   # Program Counter register with stall-enable
+    │   ├── PC_Adder.v             # 32-bit adder for PC increments and targets
+    │   └── Mux.v                  # Parameterized 2:1 and 3:1 multiplexers
+    ├── testbench/
+    │   └── pipeline_tb.v          # Pipelined testbench with waveform dumping and assertions
+    ├── run_sim.sh                 # One-click pipelined simulation script
+    └── README.md                  # Detailed 5-stage pipeline architecture documentation
 ```
 
 ---
 
-## 💡 Key Architectural Decisions
+## ⚙️ Supported Instruction Set (RV32I)
 
-- **Hardware Write-Protection for `x0`:** Register `x0` is hardwired to `32'b0`. Any write attempt targeting register index `0` is ignored in hardware, preserving ISA compliance without software overhead.
-- **Immediate Generation:** Dedicated sign-extension and bit-slicing logic handles B-type, S-type, I-type, and U-type immediate layouts directly from the instruction bus.
-- **Integrated Branch Logic:** Branch condition checks (`BEQ`, `BNE`, `BLT`, `BGE`) are computed in the ALU and fed directly to the fetch unit to update the next Program Counter within the same clock period.
-- **Modular Hardware Hierarchy:** Strict separation between control plane (`control_unit.v`), datapath routing (`data_path.v`), register bank (`register_file.v`), and memory sub-systems.
+Both processors provide complete hardware decode and execution for the base integer subset:
 
----
-
-## 📁 Repository Structure
-
-| File | Module | Description |
-| :--- | :--- | :--- |
-| [`top_riscv.v`](top_riscv.v) | `top_riscv` | Top-level module interconnecting the fetch unit, ROM, control unit, and datapath. |
-| [`data_path.v`](data_path.v) | `data_path` | Datapath wrapper routing data between the Register File, ALU, and Data Memory. |
-| [`control_unit.v`](control_unit.v) | `control_unit` | Main decoder decoding `opcode`, `funct3`, and `funct7` into operational control signals. |
-| [`alu.v`](alu.v) | `alu` | Arithmetic Logic Unit executing arithmetic, logical shifts, and branch condition comparisons. |
-| [`register_file.v`](register_file.v) | `register_file` | 32 × 32-bit general-purpose register bank with asynchronous dual reads and synchronous writes. |
-| [`instruction_fetch_unit.v`](instruction_fetch_unit.v) | `instruction_fetch_unit` | Program Counter (PC) logic managing sequential steps (`PC + 4`), branch targets, and jump links. |
-| [`instruction_memory.v`](instruction_memory.v) | `instruction_memory` | Byte-addressable ROM pre-loaded with 24 test instructions using little-endian byte ordering. |
-| [`data_memory.v`](data_memory.v) | `data_memory` | 32-byte RAM for data storage supporting Load (`LW`/`LB`) and Store (`SW`) instructions. |
-| [`imm_gen.v`](imm_gen.v) | `imm_gen` | Standalone immediate generation module. *(Immediate slicing is handled inline in `top_riscv.v`)*. |
-| [`top_tb.v`](top_tb.v) | `top_tb` | Simulation testbench driving system clock (50 MHz) and active-high reset stimulus. |
+- **R-Type:** `ADD`, `SUB`, `SLL`, `SLT`, `SLTU`, `XOR`, `SRL`, `SRA`, `OR`, `AND`
+- **I-Type Arithmetic & Shifts:** `ADDI`, `SLLI`, `SLTI`, `SLTIU`, `XORI`, `SRLI`, `SRAI`, `ORI`, `ANDI`
+- **Loads:** `LW`, `LB`
+- **Stores:** `SW`, `SB`
+- **Conditional Branches:** `BEQ`, `BNE`, `BLT`, `BGE`, `BLTU`, `BGEU`
+- **Upper Immediate & Jumps:** `LUI`, `JAL`
 
 ---
 
-## ⚙️ Supported Instruction Set
+## 🔬 Simulation & Verification
 
-### 1. R-Type (Register to Register) — `opcode: 0110011`
-| Instruction | funct3 | funct7 | Operation | Description |
-| :--- | :---: | :---: | :--- | :--- |
-| **ADD** | `000` | `0000000` | `rd = rs1 + rs2` | Addition |
-| **SUB** | `000` | `0100000` | `rd = rs1 - rs2` | Subtraction |
-| **SLL** | `001` | `0000000` | `rd = rs1 << rs2[4:0]` | Shift Left Logical |
-| **SLT** | `010` | `0000000` | `rd = (rs1 < rs2) ? 1 : 0` | Set Less Than (signed) |
-| **SLTU** | `011` | `0000000` | `rd = (rs1 < rs2) ? 1 : 0` | Set Less Than Unsigned |
-| **XOR** | `100` | `0000000` | `rd = rs1 ^ rs2` | Bitwise XOR |
-| **SRL** | `101` | `0000000` | `rd = rs1 >> rs2[4:0]` | Shift Right Logical |
-| **SRA** | `101` | `0100000` | `rd = rs1 >>> rs2[4:0]` | Shift Right Arithmetic |
-| **OR** | `110` | `0000000` | `rd = rs1 \| rs2` | Bitwise OR |
-| **AND** | `111` | `0000000` | `rd = rs1 & rs2` | Bitwise AND |
+Both cores are verified through comprehensive RTL behavioral simulation with zero compilation errors and zero warnings.
 
-### 2. I-Type (Immediate Arithmetic & Loads)
-- **Arithmetic (`opcode: 0010011`):** `ADDI`, `SLLI`, `SLTI`, `SLTIU`, `XORI`, `SRLI`, `ORI`, `ANDI`
-- **Loads (`opcode: 0000011`):** `LB`, `LH`, `LW`, `LBU`, `LHU`
-
-### 3. S-Type (Store Instructions) — `opcode: 0100011`
-- `SB` (Store Byte), `SH` (Store Halfword), `SW` (Store Word)
-
-### 4. B-Type (Conditional Branches) — `opcode: 1100011`
-- `BEQ` (Branch if Equal), `BNE` (Branch if Not Equal), `BLT` (Branch if Less Than), `BGE` (Branch if Greater or Equal)
-- Computes target address: `PC <= PC + sign_extended(offset)`.
-
-### 5. U-Type & J-Type (Upper Immediate & Jump)
-- **`LUI` (`opcode: 0110111`):** Load Upper Immediate (`rd <= imm[31:12] << 12`).
-- **`JAL` (`opcode: 1101111`):** Jump and Link (`PC <= PC + offset`, `rd <= PC + 4`).
-
----
-
-## 📋 Pre-loaded ROM Test Program
-
-[`instruction_memory.v`](instruction_memory.v) comes pre-loaded with 24 instructions that execute sequentially after reset deassertion:
-
-```assembly
-add  x6,  x8,  x9       # R-type ADD
-sub  x1,  x2,  x0       # R-type SUB
-sll  x2,  x1,  x2       # Shift left logical
-xor  x21, x10, x12      # Bitwise XOR
-srl  x21, x10, x12      # Shift right logical
-sra  x30, x26, x27      # Shift right arithmetic
-or   x31, x12, x13      # Bitwise OR
-and  x17, x14, x15      # Bitwise AND
-addi x10, x1,  10       # Add immediate
-slli x6,  x3,  4        # Shift left logical immediate
-xori x14, x5,  63       # XOR immediate
-slti x1,  x2,  10       # Set less than immediate
-srli x1,  x2,  3        # Shift right logical immediate
-ori  x1,  x2,  15       # OR immediate
-andi x1,  x2,  15       # AND immediate
-lw   x5,  4(x6)         # Load word from data memory
-sw   x7,  16(x6)        # Store word into data memory
-beq  x2,  x4,  0        # Branch if equal
-bne  x1,  x2,  8        # Branch if not equal (jumps to PC = 80)
-bge  x3,  x4,  8        # Branch if greater or equal
-blt  x1,  x2,  2        # Branch if less than
-lui  x5,  0x12345       # Load upper immediate
-jal  x1,  8             # Jump and link
+### Running the Single-Cycle Core
+```bash
+cd single-cycle
+./run_sim.sh
 ```
+*Generates `waveform.vcd` tracing all 24 instructions.*
 
----
-
-## 🔬 Verification & Validation
-
-The processor was verified through behavioral simulation:
-- **Zero Warnings / Zero Errors:** Clean compilation and elaboration under Icarus Verilog (`iverilog`).
-- **Testbench Execution:** [`top_tb.v`](top_tb.v) applies a 50 MHz clock signal and a 100 ns reset stimulus to confirm power-on state stabilization.
-- **Waveform Inspection:** Signal traces (`waveform.vcd`) confirm correct ALU calculation, Program Counter advancement, branch evaluation, and register writeback cycles.
-
----
-
-## 🚀 Future Roadmap
-
-- [ ] **Pipelined Core:** Upgrade from single-cycle to a classic 5-stage RISC pipeline (Fetch, Decode, Execute, Memory, Writeback).
-- [ ] **Hazard Handling:** Implement a Hazard Detection Unit and Forwarding Unit to resolve data and control hazards without stalling.
-- [ ] **Memory Sub-system:** Implement byte-enable masking to support sub-word operations (`LB`, `LH`, `SB`, `SH`) across unaligned 32-bit words.
-- [ ] **Privileged Architecture:** Add Control and Status Registers (CSRs) to support timer interrupts and basic trap handling.
+### Running the 5-Stage Pipelined Core
+```bash
+cd pipelined
+./run_sim.sh
+```
+*Generates `pipeline_waveform.vcd` verifying forwarding, load-use stalls, and branch flushes.*

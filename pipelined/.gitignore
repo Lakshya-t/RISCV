@@ -1,0 +1,7 @@
+# Simulation outputs
+*.vcd
+pipe_sim
+*.out
+
+# OS files
+.DS_Store
